@@ -1,5 +1,5 @@
 # Tracking code for cutbased studies 
-(based on Xiao's code: https://github.com/Taburis/myProcesses/tree/hiTracking_12_2_X/hiTracking)
+--> Based on Xiao's code: https://github.com/Taburis/myProcesses/tree/hiTracking_12_2_X/hiTracking
 
 ##CMSSW setup
 ```
