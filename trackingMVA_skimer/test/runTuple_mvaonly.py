@@ -87,6 +87,7 @@ process.myAnalyzer = cms.EDAnalyzer("trackingMVA_skimer",
                     outfile=cms.string('output.root'),
                     associator=cms.string("quickTrackAssociatorByHits"),
                     pfCandSrc = cms.InputTag("particleFlow"),
+                    CentralitySrc    = cms.InputTag("hiCentrality")
                                     )
 
 # Other statements

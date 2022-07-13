@@ -34,6 +34,15 @@
 #include <TrackingTools/PatternTools/interface/TSCPBuilderNoMaterial.h>
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 #include "DataFormats/TrackReco/interface/TrackResiduals.h"
+
+// Particle Flow
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
+#include "DataFormats/ParticleFlowReco/interface/PFBlock.h"
+#include "DataFormats/ParticleFlowReco/interface/PFCluster.h"
+#include "DataFormats/ParticleFlowReco/interface/PFClusterFwd.h"
+
+#include "DataFormats/HeavyIonEvent/interface/Centrality.h"
+
 #include "TMath.h"
 
 #include <functional>
