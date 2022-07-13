@@ -74,7 +74,9 @@ class trackingMVA_skimer : public edm::EDAnalyzer {
 		edm::EDGetTokenT<edm::View<reco::Track> > trackToken;
 		edm::EDGetTokenT<edm::View<reco::Track> > trackHighPurityToken;
 		edm::EDGetTokenT<TrackingParticleCollection> simTPToken;
+		edm::EDGetTokenT<reco::Centrality> CentralityTag_;		
 		edm::EDGetTokenT<reco::PFCandidateCollection> pfCandSrc_;
+
 
 
 		float tvFake;
@@ -103,6 +105,7 @@ class trackingMVA_skimer : public edm::EDAnalyzer {
 		Int_t isHP;
 		//event quantities
 		float hihf = 0;
+		
 
 		Int_t sim_rec;
 		bool  passTrkCut=0;

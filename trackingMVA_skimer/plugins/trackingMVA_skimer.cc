@@ -76,7 +76,8 @@ trackingMVA_skimer::trackingMVA_skimer(const edm::ParameterSet& Params)
 		trackToken = consumes<edm::View<Track> > (edm::InputTag(source));
 		trackHighPurityToken = consumes<edm::View<Track> >(edm::InputTag("selectHighPurity"));
 		simTPToken = consumes<TrackingParticleCollection>(simSource);
-		pfCandSrc_ = consumes<reco::PFCandidateCollection>(<edm::InputTag>("pfCandSrc"));
+		CentralityTag_ = consumes<reco::Centrality>(iConfig.getParameter<edm::InputTag>("CentralitySrc"));
+		pfCandSrc_ = consumes<reco::PFCandidateCollection>(iConfig.getParameter<edm::InputTag>("pfCandSrc"));
 		
 
 		doMVA_ = false;
