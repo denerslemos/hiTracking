@@ -60,6 +60,7 @@ class trackingMVA_skimer : public edm::EDAnalyzer {
 
 		int getBestVertex(reco::TrackBaseRef,reco::VertexCollection);
 		bool hiTrkCuts(const reco::Track & trk, const reco::Vertex & vtx);
+		bool caloMatched(const reco::Track & track, const edm::Event& iEvent, unsigned it );
 
 		const reco::TrackToTrackingParticleAssociator* associator;
 		std::string source;
@@ -73,49 +74,53 @@ class trackingMVA_skimer : public edm::EDAnalyzer {
 		edm::EDGetTokenT<edm::View<reco::Track> > trackToken;
 		edm::EDGetTokenT<edm::View<reco::Track> > trackHighPurityToken;
 		edm::EDGetTokenT<TrackingParticleCollection> simTPToken;
+		edm::EDGetTokenT<reco::PFCandidateCollection> pfCandSrc_;
 
 
 		float tvFake;
+		float tvSec;
 		float tvIter;
 		float tvNdof;
 		float tvpt;
 		float tvNlayers;
-                float tvNlayers3D;
+        float tvNlayers3D;
 		float tvNlayersLost;
-                float tvChi2n;
-                float tvChi2n_no1Dmod;
-                float tvEta;
-                //float tvPhi;
-                float tvRelPtErr;
-                float tvNhits;
-                float tvLostIn;
-                float tvLostOut;
-                float tvMinLost;
-                float tvLostMidFrac;
-                float tvAbsDz;
-                float tvAbsD0;
-                float tvAbsDzPV;
-                float tvAbsD0PV;
-                float tvMvaVal;
+        float tvChi2n;
+        float tvChi2n_no1Dmod;
+        float tvEta;
+        float tvPhi;
+        float tvRelPtErr;
+        float tvNhits;
+        float tvLostIn;
+        float tvLostOut;
+        float tvMinLost;
+        float tvLostMidFrac;
+        float tvAbsDz;
+        float tvAbsD0;
+        float tvAbsDzPV;
+        float tvAbsD0PV;
+        float tvMvaVal;
 		Int_t isHP;
-
+		//event quantities
+		float hihf = 0;
 
 		Int_t sim_rec;
 		bool  passTrkCut=0;
 		float sim_pt;
 		float sim_eta;
 		float sim_phi;
+		float sim_hihf;
+
 
 		bool doMVA_, makeSimTree_, makeMVATree_;
-                std::vector<TMVA::Reader*> tmvaReaders_;
-                std::vector<std::string> mvaTypes_;
-//		std::string mvaType_;
-                std::vector<float> d_mvaValues;
-                std::vector<float>* mvaValues;
+        std::vector<TMVA::Reader*> tmvaReaders_;
+        std::vector<std::string> mvaTypes_;
+        std::vector<float> d_mvaValues;
+        std::vector<float>* mvaValues;
 
-                TTree* outTree, *simTree;
+         TTree* outTree, *simTree;
 
-                edm::ESHandle<MagneticField> magfield;
+         edm::ESHandle<MagneticField> magfield;
 };
 
 class trackCompare

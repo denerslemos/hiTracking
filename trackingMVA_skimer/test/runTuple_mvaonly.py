@@ -81,11 +81,12 @@ process.myAnalyzer = cms.EDAnalyzer("trackingMVA_skimer",
 				    makeMVATree_=cms.bool(True),
 				    makeSimTree_=cms.bool(True),
 				    source=cms.string("generalTracks"),
-                                    simSource=cms.InputTag("mix","MergedTrackTruth"),
-                                    beamspot = cms.InputTag("offlineBeamSpot"),
-                                    vertices = cms.InputTag("firstStepPrimaryVertices"),
-                                    outfile=cms.string('output.root'),
-                                    associator=cms.string("quickTrackAssociatorByHits"),
+                    simSource=cms.InputTag("mix","MergedTrackTruth"),
+                    beamspot = cms.InputTag("offlineBeamSpot"),
+                    vertices = cms.InputTag("firstStepPrimaryVertices"),
+                    outfile=cms.string('output.root'),
+                    associator=cms.string("quickTrackAssociatorByHits"),
+                    pfCandSrc = cms.InputTag("particleFlow"),
                                     )
 
 # Other statements

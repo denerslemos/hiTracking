@@ -67,9 +67,10 @@ trackingMVA_skimer::trackingMVA_skimer(const edm::ParameterSet& Params)
 		trackToken = consumes<edm::View<Track> > (edm::InputTag(source));
 		trackHighPurityToken = consumes<edm::View<Track> >(edm::InputTag("selectHighPurity"));
 		simTPToken = consumes<TrackingParticleCollection>(simSource);
+		pfCandSrc_ = consumes<reco::PFCandidateCollection>(<edm::InputTag>("pfCandSrc"));
+		
 
 		doMVA_ = false;
-		//	std::string mvaFileName;
 		vector<string> mvaFileNames;
 		if(Params.exists("doMVA")) doMVA_ = Params.getParameter<bool>("doMVA");
 		if(Params.exists("mvaType")) mvaTypes_ = Params.getParameter<vector<string> >("mvaType");
@@ -84,7 +85,6 @@ trackingMVA_skimer::trackingMVA_skimer(const edm::ParameterSet& Params)
 						tmvaReader_->AddVariable("nhits",&tvNhits);
 						tmvaReader_->AddVariable("relpterr",&tvRelPtErr);
 						tmvaReader_->AddVariable("eta",&tvEta);
-						//tmvaReader_->AddVariable("phi",&tvPhi);
 						tmvaReader_->AddVariable("chi2n_no1Dmod",&tvChi2n_no1Dmod);
 						tmvaReader_->AddVariable("chi2n",&tvChi2n);
 						tmvaReader_->AddVariable("nlayerslost",&tvNlayersLost);
@@ -109,11 +109,13 @@ trackingMVA_skimer::trackingMVA_skimer(const edm::ParameterSet& Params)
 				simTree->Branch("sim_pt" ,&sim_pt ,"sim_pt/F");
 				simTree->Branch("sim_eta",&sim_eta,"sim_eta/F");
 				simTree->Branch("sim_phi",&sim_phi,"sim_phi/F");
+				simTree->Branch("sim_hiHF",&sim_hihf,"sim_hiHF/F");
 		}
 
 		if(makeMVATree_){
 				outTree = new TTree("NtupleTree","",1);
 				outTree->Branch("fake",&tvFake,"fake/F");
+				outTree->Branch("sec",&tvSec,"sec/F");
 				outTree->Branch("iter",&tvIter,"iter/F");
 				outTree->Branch("ndof",&tvNdof,"ndof/F");
 				outTree->Branch("pt",&tvpt,"pt/F");
@@ -123,7 +125,7 @@ trackingMVA_skimer::trackingMVA_skimer(const edm::ParameterSet& Params)
 				outTree->Branch("chi2n",&tvChi2n,"chi2n/F");
 				outTree->Branch("chi2n_no1Dmod",&tvChi2n_no1Dmod,"chi2n_no1Dmod/F");
 				outTree->Branch("eta",&tvEta,"eta/F");
-				//outTree->Branch("phi",&tvPhi,"phi/F");
+				outTree->Branch("phi",&tvPhi,"phi/F");
 				outTree->Branch("relpterr",&tvRelPtErr,"relpterr/F");
 				outTree->Branch("nhits",&tvNhits,"nhits/F");
 				outTree->Branch("lostin",&tvLostIn,"lostin/F");
@@ -136,6 +138,7 @@ trackingMVA_skimer::trackingMVA_skimer(const edm::ParameterSet& Params)
 				outTree->Branch("absd0PV",&tvAbsD0PV,"absd0PV/F");
 				outTree->Branch("mvavals","std::vector<float>",&mvaValues);
 				outTree->Branch("isHP",&isHP, "isHP/I");
+				outTree->Branch("hiHF",&hihf, "hiHF/F");
 		}
 
 		consumes<reco::TrackToTrackingParticleAssociator>(edm::InputTag(associatorName));
@@ -169,8 +172,6 @@ trackingMVA_skimer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 		iEvent.getByToken(associatorToken,assocHandle);
 		associator = assocHandle.product();
 
-		//iSetup.get<IdealMagneticFieldRecord>().get(magfield);
-
 		edm::Handle<reco::VertexCollection> Vtx;
 		iEvent.getByToken(vertices,Vtx);
 
@@ -180,6 +181,10 @@ trackingMVA_skimer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 		iEvent.getByToken(trackHighPurityToken,handleHighPurity);
 		edm::Handle<TrackingParticleCollection> simTPhandle;
 		iEvent.getByToken(simTPToken,simTPhandle);
+
+	    edm::Handle<reco::Centrality> centrality;
+    	iEvent.getByToken(CentralityTag_, centrality);
+    	
 		const TrackingParticleCollection simTracks = *(simTPhandle.product());
 
 		reco::RecoToSimCollection recSimColl;
@@ -191,61 +196,69 @@ trackingMVA_skimer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 		auto vtxVector  = Vtx.product();
 		reco::VertexCollection vsorted = *Vtx;
 		std::sort(vsorted.begin(), vsorted.end(), trackingMVA_skimer::sortVertex);
+		
+   		// skip events with no PV, this should not happen
+	    if( vsorted.size() == 0) return;
+	    if( fabs(vsorted[0].z()) > 15. ) return; //vz cut
 
+	    
+		//GEN part
 		if(makeSimTree_){
-				/*
-				   for(auto & p : simTracks){
-				   if(p.status() < 0 || p.charge()==0) continue;
-				   sim_pt = p.pt();	
-				   sim_eta = p.eta();	
-				   sim_phi = p.phi();	
-				   simTree->Fill();	
-				   }
-				   */
+
 				bool doCaloMatched_ = true;
 				Handle<edm::View<reco::Track> > tcol;
 				for(TrackingParticleCollection::size_type j=0 ; j<simTPhandle->size(); j++){
 						TrackingParticleRef tpr(simTPhandle, j);
 						TrackingParticle* p = const_cast<TrackingParticle*>(tpr.get());
 						if(p->status() < 0 || p->charge()==0) continue;
-						Int_t nrec=0;
+						Int_t nrec = 0;
 						passTrkCut = 0 ;
 						if(simRecColl.find(tpr) != simRecColl.end()){
 								auto rt = (std::vector<std::pair<edm::RefToBase<reco::Track>, double> >) simRecColl[tpr];
 								std::vector<std::pair<edm::RefToBase<reco::Track>, double> >::const_iterator rtit;
-								nrec = rt.size();
+								//nrec = rt.size();
 								for (rtit = rt.begin(); rtit != rt.end(); ++rtit){
 										const reco::Track* tmtr = rtit->first.get();
 										if( ! hiTrkCuts(*tmtr, vsorted[0]) ) continue;
 										unsigned index = -1;
-										//if( doCaloMatched_ ){ 
-										//		for(edm::View<reco::Track>::size_type i=0; i<tcol->size(); ++i){ 
-										//				edm::RefToBase<reco::Track> track(tcol, i);
-										//				reco::Track* tr=const_cast<reco::Track*>(track.get());
-										//				index++;
-										//				if( tmtr->pt() == tr->pt() && tmtr->eta() == tr->eta() && tmtr->phi() == tr->phi() && tmtr->numberOfValidHits() == tr->numberOfValidHits() ) break;//simple match to find the corresponding index number (i-th track) in the track collection
-										//		}
-										//		if( ! caloMatched(*tmtr, iEvent, index) ) continue;
-										//}  
+										if( doCaloMatched_ ){ 
+												for(edm::View<reco::Track>::size_type i=0; i<tcol->size(); ++i){ 
+														edm::RefToBase<reco::Track> track(tcol, i);
+														reco::Track* tr=const_cast<reco::Track*>(track.get());
+														index++;
+														if( tmtr->pt() == tr->pt() && tmtr->eta() == tr->eta() && tmtr->phi() == tr->phi() && tmtr->numberOfValidHits() == tr->numberOfValidHits() ) break;//simple match to find the corresponding index number (i-th track) in the track collection
+												}
+												if( ! caloMatched(*tmtr, iEvent, index) ) continue;
+										}
+										nrec++;  
 										passTrkCut = 1;
 										break;
-										/*
-										*/
 								}
 						}
 						sim_rec = nrec;
 						sim_pt  = p->pt();	
 						sim_eta = p->eta();	
 						sim_phi = p->phi();	
+						sim_hihf = centrality->EtHFtowerSum();
 						simTree->Fill();
 				}
 		}
 
+		//Reco part
 		for (int i = 0; i<(int)handle->size(); i++){
+		
 				mvaValues->clear();
 				mvaValues->reserve(mvaTypes_.size());
+
+				edm::RefToBase<reco::Track> track(handle, i);
+     			reco::Track* tr=const_cast<reco::Track*>(track.get());
+
+    			 if( ! caloMatched(*tr, iEvent, i) ) continue;
+
 				Track tk = (handle->at(i));
 				tvFake = 1;
+				tvSec = 0;
+				hihf = centrality->EtHFtowerSum();
 				isHP = Int_t(tk.quality(reco::TrackBase::qualityByName("highPurity")));
 				tvNdof = tk.ndof();
 				tvNlayers = tk.hitPattern().trackerLayersWithMeasurement();
@@ -275,7 +288,7 @@ trackingMVA_skimer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 				tvChi2n = chi2n;
 				tvChi2n_no1Dmod = chi2n_no1Dmod;
 				tvEta = tk.eta();
-				//tvPhi = tk.phi();
+				tvPhi = tk.phi();
 				tvpt = tk.pt();
 				tvRelPtErr = float(tk.ptError())/std::max(float(tk.pt()),0.000001f);
 				tvNhits = tk.numberOfValidHits();
@@ -292,7 +305,7 @@ trackingMVA_skimer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 				int vdx = getBestVertex(trackRef1,*(vtxVector));
 				Point VertexPosition(0,0, -99999); 
 				if(vdx >-1) VertexPosition = vtxVector->at(vdx);
-				tvAbsDzPV = fabs(tk.dz (VertexPosition));
+				tvAbsDzPV = fabs(tk.dz(VertexPosition));
 				tvAbsD0PV = fabs(tk.dxy(VertexPosition));
 
 				TString algoName(tk.algoName());
@@ -319,19 +332,25 @@ trackingMVA_skimer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 				}
 
 				vector<pair<TrackingParticleRef, double> > tp1;
-				if(recSimColl.find(trackRef1) != recSimColl.end()) tp1 = recSimColl[trackRef1];
+     			const TrackingParticle *mtp=0;
+				if(recSimColl.find(trackRef1) != recSimColl.end()){
+					tp1 = recSimColl[trackRef1];
+					mtp = tp1.begin()->first.get();
+					if(mtp->status() < 0) tvSec = 1; 
+				}
+				
 				if(tp1.size() > 0)
 				{
 						tvFake = 0;
 				}
+				
 
-				//                tvMvaVal = -99999;
 				if(doMVA_){
 						for(unsigned int i = 0; i < tmvaReaders_.size();i++){
 								mvaValues->push_back(tmvaReaders_[i]->EvaluateMVA("BDTG"));
 						}
 				}
-
+				
 				if(makeMVATree_) outTree->Fill();
 		}
 }
@@ -386,6 +405,46 @@ int trackingMVA_skimer::getBestVertex(TrackBaseRef track, VertexCollection verti
 		else return idx2;
 }
 
+bool trackingMVA_skimer::caloMatched( const reco::Track & track, const edm::Event& iEvent, unsigned it )
+{
+  
+  // obtain pf candidates
+  edm::Handle<reco::PFCandidateCollection> pfCandidates;
+  iEvent.getByToken(pfCandSrc_, pfCandidates);
+  if( !pfCandidates.isValid() ) return false;
+
+  double ecalEnergy = 0.;
+  double hcalEnergy = 0.;
+
+  for( unsigned ic = 0; ic < pfCandidates->size(); ic++ ) {//calo matching loops
+
+      const reco::PFCandidate& cand = (*pfCandidates)[ic];
+
+      int type = cand.particleId();
+
+      // only charged hadrons and leptons can be asscociated with a track
+      if(!(type == reco::PFCandidate::h ||     //type1
+      type == reco::PFCandidate::e ||     //type2
+      type == reco::PFCandidate::mu      //type3
+      )) continue;
+
+      reco::TrackRef trackRef = cand.trackRef();
+      if( it == trackRef.key() ) {
+        // cand_index = ic;
+        ecalEnergy = cand.ecalEnergy();
+        hcalEnergy = cand.hcalEnergy();              
+        break;
+      } 
+  }
+
+  //if((track.pt()-reso_*track.ptError())*TMath::CosH( track.eta() )>15 && (track.pt()-reso_*track.ptError())*TMath::CosH( track.eta() ) > hcalEnergy+ecalEnergy ) return false;
+  if( track.pt() < 20 || ( (hcalEnergy+ecalEnergy)/( track.pt()*TMath::CosH(track.eta() ) ) > 0.5 && (hcalEnergy+ecalEnergy)/(TMath::CosH(track.eta())) > (track.pt() - 80.0) )  ) return true;
+  else {
+    return false;
+  }
+}
+
+
 bool trackingMVA_skimer::sortVertex(const reco::Vertex & a, const reco::Vertex & b){
 		if( a.tracksSize() != b.tracksSize() )
 				return  a.tracksSize() > b.tracksSize() ? true : false ;
@@ -396,7 +455,7 @@ bool trackingMVA_skimer::sortVertex(const reco::Vertex & a, const reco::Vertex &
 bool trackingMVA_skimer::hiTrkCuts(const reco::Track & track, const reco::Vertex & vertex){
 
 		// the track cuts defined here:
-		float dxyErrMax_ =3.0, dzErrMax_ = 3.0, ptErrMax_=.10, chi2nMax_ = .15;
+		float dxyErrMax_ =3.0, dzErrMax_ = 3.0, ptErrMax_=.10, chi2nMax_ = .18;
 		int nhitsMin_ = 11;
 	
 		math::XYZPoint vtxPoint(0.0,0.0,0.0);
