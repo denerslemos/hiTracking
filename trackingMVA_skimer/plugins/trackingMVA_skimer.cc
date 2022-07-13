@@ -242,7 +242,7 @@ trackingMVA_skimer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 												}
 												if( ! caloMatched(*tmtr, iEvent, index) ) continue;
 										}
-										nrec++;  
+										nrec = nrec+1;  
 										passTrkCut = 1;
 										break;
 								}
@@ -264,8 +264,6 @@ trackingMVA_skimer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 
 				edm::RefToBase<reco::Track> track(handle, i);
      			reco::Track* tr=const_cast<reco::Track*>(track.get());
-
-    			 if( ! caloMatched(*tr, iEvent, i) ) continue;
 
 				Track tk = (handle->at(i));
 				tvFake = 1;
@@ -356,12 +354,7 @@ trackingMVA_skimer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 						tvFake = 0;
 				}
 				
-
-				if(doMVA_){
-						for(unsigned int i = 0; i < tmvaReaders_.size();i++){
-								mvaValues->push_back(tmvaReaders_[i]->EvaluateMVA("BDTG"));
-						}
-				}
+				if( !caloMatched(*tr, iEvent, i) ) continue;
 				
 				if(makeMVATree_) outTree->Fill();
 		}
