@@ -64,7 +64,9 @@ trackingMVA_skimer::trackingMVA_skimer(const edm::ParameterSet& Params)
 		associatorName = "TrackAssociatorByHits";
 		mvaValues = &d_mvaValues;
 		beamspot_ = Params.getParameter<edm::InputTag>("beamspot");
-
+		cent_ = Params.getParameter<edm::InputTag>("CentralitySrc");
+		pfcand_ = Params.getParameter<edm::InputTag>("pfCandSrc");
+		
 		if(Params.exists("outfile")) outFile = new TFile(Params.getParameter<string>("outfile").c_str(),"RECREATE");
 		if(Params.exists("source")) source = Params.getParameter<string>("source");
 		if(Params.exists("associator")) associatorName = Params.getParameter<string>("associator");
@@ -76,8 +78,8 @@ trackingMVA_skimer::trackingMVA_skimer(const edm::ParameterSet& Params)
 		trackToken = consumes<edm::View<Track> > (edm::InputTag(source));
 		trackHighPurityToken = consumes<edm::View<Track> >(edm::InputTag("selectHighPurity"));
 		simTPToken = consumes<TrackingParticleCollection>(simSource);
-		CentralityTag_ = consumes<reco::Centrality>(iConfig.getParameter<edm::InputTag>("CentralitySrc"));
-		pfCandSrc_ = consumes<reco::PFCandidateCollection>(iConfig.getParameter<edm::InputTag>("pfCandSrc"));
+		CentralityTag_ = consumes<reco::Centrality>(cent_);
+		pfCandSrc_ = consumes<reco::PFCandidateCollection>(pfcand_);
 		
 
 		doMVA_ = false;

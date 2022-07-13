@@ -28,6 +28,14 @@
 #include <iostream>
 #include <map>
 
+// Particle Flow
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
+#include "DataFormats/ParticleFlowReco/interface/PFBlock.h"
+#include "DataFormats/ParticleFlowReco/interface/PFCluster.h"
+#include "DataFormats/ParticleFlowReco/interface/PFClusterFwd.h"
+
+#include "DataFormats/HeavyIonEvent/interface/Centrality.h"
+
 #include "TTree.h"
 #include "TH1F.h"
 #include "TH2F.h"
@@ -68,6 +76,8 @@ class trackingMVA_skimer : public edm::EDAnalyzer {
 		TFile* outFile;
 		edm::InputTag simSource;
 		edm::InputTag beamspot_;
+		edm::InputTag cent_;
+		edm::InputTag pfcand_;
 		edm::EDGetTokenT<reco::VertexCollection> vertices;
 		edm::EDGetTokenT<reco::BeamSpot> beamspotToken;
 		edm::EDGetTokenT<reco::TrackToTrackingParticleAssociator> associatorToken;
